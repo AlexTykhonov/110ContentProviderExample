@@ -2,14 +2,20 @@ package com.tae.a110contentproviderexample;
 
 import android.Manifest;
 import android.content.ContentResolver;
+import android.content.ContentUris;
+import android.content.ContentValues;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.net.Uri;
 import android.provider.ContactsContract;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Toast;
 
@@ -20,6 +26,9 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_CODE_READ_CONTACTS = 1;
     private static boolean READ_CONTACTS_GRANTED = false;
 
+    EditText editText;
+    Button button;
+
     ListView contactList;
     ArrayList<String> contacts = new ArrayList<String>();
 
@@ -27,9 +36,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
         contactList = (ListView) findViewById(R.id.contactList);
-
+        editText = findViewById(R.id.editText);
         // получаем разрешения
         int hasReadContactPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS);
         // если устройство до API 23, устанавливаем разрешение
@@ -43,6 +51,8 @@ public class MainActivity extends AppCompatActivity {
         if (READ_CONTACTS_GRANTED) {
             loadContacts();
         }
+
+     button.setEnabled(READ_CONTACTS_GRANTED);
     }
 
     @Override
@@ -59,6 +69,7 @@ public class MainActivity extends AppCompatActivity {
         } else {
             Toast.makeText(this, "Требуется установить разрешения", Toast.LENGTH_LONG).show();
         }
+        button.setEnabled(READ_CONTACTS_GRANTED);
     }
 
     private void loadContacts() {
@@ -81,5 +92,24 @@ public class MainActivity extends AppCompatActivity {
                 android.R.layout.simple_list_item_1, contacts);
         // устанавливаем для списка адаптер
         contactList.setAdapter(adapter);
+    }
+
+    public void onAddContact(View v) {
+        ContentValues contentValues = new ContentValues();
+        String newContact = editText.getText().toString();
+        editText.setText("");
+        contentValues.put(ContactsContract.RawContacts.ACCOUNT_NAME,newContact);
+        contentValues.put(ContactsContract.RawContacts.ACCOUNT_TYPE,newContact);
+        Uri uri = getContentResolver().insert(ContactsContract.RawContacts.CONTENT_URI, contentValues);
+        long id = ContentUris.parseId (uri);
+        contentValues.clear();
+
+        contentValues.put(ContactsContract.Data.RAW_CONTACT_ID,id);
+        contentValues.put(ContactsContract.Data.MIMETYPE, ContactsContract.CommonDataKinds.StructuredName.CONTENT_ITEM_TYPE);
+        contentValues.put(ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME,newContact);
+
+        getContentResolver().insert(ContactsContract.Data.CONTENT_URI, contentValues);
+        Toast.makeText(this, "Контакт был добавлен!", Toast.LENGTH_LONG).show();
+        loadContacts();
     }
 }
